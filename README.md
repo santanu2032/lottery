@@ -5,7 +5,7 @@ An interactive, physics-based spinning wheel application designed to fairly rand
 Built to ensure a transparent, visual, and conflict-free assignment process for class projects and presentations.
 
 ## 🚀 Live Demo
-**[Play the CYS1 Lottery](https://santanu2032.github.io/lottery/)**
+**[Play the CYS1 Lottery](https://santanu2032.github.io/lottery/index.html)**
 
 ## ✨ Features
 *   **Physics-Based Animation:** Smooth wheel rotation with randomized velocity and deceleration using HTML5 Canvas.
@@ -29,3 +29,15 @@ Since this is a static, zero-dependency project, you can run it instantly on any
 1. Clone the repository:
    ```bash
    git clone [https://github.com/santanu2032/lottery.git](https://github.com/santanu2032/lottery.git)
+   ```
+
+## Screenshot
+
+<img width="1582" height="1079" alt="image" src="https://github.com/user-attachments/assets/de7f7ff9-4e81-40b2-894f-8dbc7f5a5d61" />
+<img width="879" height="955" alt="image" src="https://github.com/user-attachments/assets/e9311700-372b-40c6-83c0-a8b17e1aa7cd" />
+
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/629bb1e7-d7de-4d88-ab17-96720b2139b2" />
+<img width="1050" height="940" alt="image" src="https://github.com/user-attachments/assets/eaeff83e-710d-49bd-9b82-08873b42267a" />
+
+
+
