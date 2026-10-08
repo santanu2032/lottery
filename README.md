@@ -5,7 +5,7 @@ An interactive, physics-based spinning wheel application designed to fairly rand
 Built to ensure a transparent, visual, and conflict-free assignment process for class projects and presentations.
 
 ## 🚀 Live Demo
-**[Play the CYS1 Lottery]([https://santanu2032.github.io/lottery/](https://santanu2032.github.io/lottery/index.html))**
+**[Play the CYS1 Lottery]([https://santanu2032.github.io/lottery/index.html])**
 
 ## ✨ Features
 *   **Physics-Based Animation:** Smooth wheel rotation with randomized velocity and deceleration using HTML5 Canvas.
