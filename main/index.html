@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYS1 Group Lottery</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            text-align: center;
+
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 650px;
+            margin: auto;
+            /* Elevated Dark Grey Panel */
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+        }
+        h2 { margin-top: 0; color: #ffffff; letter-spacing: 1px; }
+
+        .status-bar {
+            background: #2d2d2d;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+
+            color: #6ea8fe;
+        }
+
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        canvas {
+            border-radius: 50%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            background-color: #1e1e1e;
+        }
+        .pointer {
+            position: absolute;
+            top: 50%;
+            right: -15px;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-top: 15px solid transparent;
+            border-bottom: 15px solid transparent;
+            border-right: 30px solid #ff4757;
+            z-index: 10;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button:active { transform: scale(0.97); }
+        button:disabled { background-color: #495057 !important; color: #adb5bd !important; cursor: not-allowed; }
+
+        #spinBtn { background-color: #0d6efd; box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3); }
+        #resetBtn { background-color: #495057; }
+        #resetBtn:hover { background-color: #6c757d; }
+
+        .pool-container {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px dashed #444;
+        }
+        .pool-container h3 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            color: #cccccc;
+        }
+        #ticketPool {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        .ticket-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-content {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            transform: translateY(20px);
+            transition: transform 0.3s;
+            border: 1px solid #333;
+        }
+        .modal-overlay.show .modal-content {
+            transform: translateY(0);
+        }
+        .modal-group { font-size: 22px; color: #e0e0e0; font-weight: bold; margin-bottom: 5px;}
+        .modal-winner { font-size: 28px; font-weight: bold; margin: 15px 0; line-height: 1.2; text-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+        .modal-remnant { font-size: 16px; color: #ff6b6b; margin-bottom: 25px; }
+        #acceptBtn { background-color: #198754; width: 100%; padding: 15px; font-size: 18px; box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3);}
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>CYS1 Subject Lottery</h2>
+
+    <div class="status-bar" id="statusText">
+        Ready for Group A
+    </div>
+
+    <div class="canvas-container">
+        <div class="pointer"></div>
+        <canvas id="wheelCanvas" width="400" height="400"></canvas>
+    </div>
+
+    <div class="controls">
+        <button id="spinBtn">Spin Wheel</button>
+        <button id="resetBtn">Reset Pool</button>
+    </div>
+
+    <div class="pool-container">
+        <h3>Remnant Tickets in Pool (<span id="poolCount">12</span>)</h3>
+        <div id="ticketPool"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="winnerModal">
+    <div class="modal-content">
+        <div class="modal-group" id="modalGroupText">Group A Spun:</div>
+        <div class="modal-winner" id="modalWinnerText">Subject Name</div>
+        <div class="modal-remnant" id="modalRemnantText">Tickets left after this: 11</div>
+        <button id="acceptBtn">Accept & Remove Ticket</button>
+    </div>
+</div>
+
+<script>
+    // The 12 Groups
+    const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+    let currentGroupIndex = 0;
+
+    // The 12 balanced tickets
+    const initialTickets = [
+        { text: "Mathematics", color: '#FF595E' },
+        { text: "Mathematics", color: '#FFCA3A' },
+        { text: "Mathematics", color: '#8AC926' },
+        { text: "Physics", color: '#1982C4' },
+        { text: "Physics", color: '#6A4C93' },
+        { text: "Physics", color: '#F15BB5' },
+        { text: "Intro to C", color: '#00BBF9' },
+        { text: "Intro to C", color: '#00F5D4' },
+        { text: "Indian Knowledge Sys", color: '#F9C80E' },
+        { text: "Indian Knowledge Sys", color: '#FF9F1C' },
+        { text: "Environmental Sci", color: '#43AA8B' },
+        { text: "Environmental Sci", color: '#577590' }
+    ];
+
+    let tickets = [...initialTickets];
+    let winningIndex = -1;
+
+    const canvas = document.getElementById("wheelCanvas");
+    const ctx = canvas.getContext("2d");
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = canvas.width / 2;
+
+    let currentAngle = 0;
+    let spinVelocity = 0;
+    let animationId;
+    let isSpinning = false;
+
+    const spinBtn = document.getElementById("spinBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const statusText = document.getElementById("statusText");
+    const poolCount = document.getElementById("poolCount");
+    const ticketPool = document.getElementById("ticketPool");
+
+    const modal = document.getElementById("winnerModal");
+    const modalGroupText = document.getElementById("modalGroupText");
+    const modalWinnerText = document.getElementById("modalWinnerText");
+    const modalRemnantText = document.getElementById("modalRemnantText");
+    const acceptBtn = document.getElementById("acceptBtn");
+
+    function updateUI() {
+        if (tickets.length === 0 || currentGroupIndex >= groups.length) {
+            statusText.innerText = "Lottery Complete!";
+            statusText.style.color = "#20c997";
+            spinBtn.disabled = true;
+        } else {
+            statusText.innerText = `Now Spinning: Group ${groups[currentGroupIndex]}`;
+            statusText.style.color = "#6ea8fe";
+            spinBtn.disabled = false;
+        }
+
+        poolCount.innerText = tickets.length;
+        ticketPool.innerHTML = "";
+        tickets.forEach(ticket => {
+            const badge = document.createElement("div");
+            badge.className = "ticket-badge";
+            badge.style.backgroundColor = ticket.color;
+            badge.innerText = ticket.text;
+            ticketPool.appendChild(badge);
+        });
+    }
+
+    function drawWheel() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (tickets.length === 0) {
+            ctx.font = "bold 24px 'Segoe UI'";
+            ctx.fillStyle = "#ffffff";
+            ctx.textAlign = "center";
+            ctx.fillText("All subjects assigned!", centerX, centerY);
+            return;
+        }
+
+        const arcSize = (2 * Math.PI) / tickets.length;
+
+        for (let i = 0; i < tickets.length; i++) {
+            const angle = currentAngle + i * arcSize;
+
+            ctx.beginPath();
+            ctx.fillStyle = tickets[i].color;
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, angle, angle + arcSize);
+            ctx.fill();
+
+
+            ctx.strokeStyle = "#1e1e1e";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(
+                centerX + Math.cos(angle + arcSize / 2) * (radius * 0.60),
+                centerY + Math.sin(angle + arcSize / 2) * (radius * 0.60)
+            );
+            ctx.rotate(angle + arcSize / 2);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#ffffff";
+
+            ctx.font = "bold 12px 'Segoe UI'";
+
+            ctx.shadowColor = "rgba(0,0,0,0.8)";
+            ctx.shadowBlur = 5;
+            ctx.fillText(tickets[i].text, 0, 0);
+            ctx.restore();
+        }
+    }
+
+    function spin() {
+        if (isSpinning || tickets.length === 0) return;
+        isSpinning = true;
+        spinBtn.disabled = true;
+        resetBtn.disabled = true;
+        statusText.innerText = `Spinning for Group ${groups[currentGroupIndex]}...`;
+
+        spinVelocity = Math.random() * 0.2 + 0.3;
+        animateSpin();
+    }
+
+    function animateSpin() {
+        currentAngle += spinVelocity;
+        spinVelocity *= 0.985;
+
+        if (spinVelocity < 0.002) {
+            spinVelocity = 0;
+            cancelAnimationFrame(animationId);
+            showWinnerPopup();
+        } else {
+            drawWheel();
+            animationId = requestAnimationFrame(animateSpin);
+        }
+    }
+
+    function showWinnerPopup() {
+        isSpinning = false;
+        resetBtn.disabled = false;
+        const arcSize = (2 * Math.PI) / tickets.length;
+        const normalizedAngle = currentAngle % (2 * Math.PI);
+        const pointerAngle = (2 * Math.PI - normalizedAngle) % (2 * Math.PI);
+
+        winningIndex = Math.floor(pointerAngle / arcSize);
+        const winner = tickets[winningIndex];
+
+        modalGroupText.innerText = `Group ${groups[currentGroupIndex]} Gets:`;
+
+        let fullName = winner.text;
+        if(fullName === "Intro to C") fullName = "Introduction to C";
+        if(fullName === "Indian Knowledge Sys") fullName = "Indian Knowledge System";
+        if(fullName === "Environmental Sci") fullName = "Environmental Science";
+
+        modalWinnerText.innerText = fullName;
+        modalWinnerText.style.color = winner.color;
+        modalRemnantText.innerText = `Tickets left after this: ${tickets.length - 1}`;
+
+        modal.classList.add("show");
+    }
+
+    acceptBtn.addEventListener("click", () => {
+        tickets.splice(winningIndex, 1);
+        currentGroupIndex++;
+        modal.classList.remove("show");
+
+        updateUI();
+        drawWheel();
+    });
+
+    resetBtn.addEventListener("click", () => {
+        if(confirm("Are you sure you want to reset the entire lottery?")) {
+            tickets = [...initialTickets];
+            currentGroupIndex = 0;
+            currentAngle = 0;
+            updateUI();
+            drawWheel();
+        }
+    });
+
+    spinBtn.addEventListener("click", spin);
+    updateUI();
+    drawWheel();
+</script>
+</body>
+</html>
