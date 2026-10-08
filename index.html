@@ -8,7 +8,6 @@
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             text-align: center;
-
             background-color: #121212;
             color: #e0e0e0;
             margin: 0;
@@ -17,7 +16,6 @@
         .container {
             max-width: 650px;
             margin: auto;
-            /* Elevated Dark Grey Panel */
             background: #1e1e1e;
             padding: 30px;
             border-radius: 12px;
@@ -32,7 +30,6 @@
             font-size: 20px;
             font-weight: bold;
             margin-bottom: 20px;
-
             color: #6ea8fe;
         }
 
@@ -109,7 +106,34 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
 
+        /* Report Table Styles */
+        #reportContainer {
+            margin-top: 20px;
+            display: none; /* Hidden until complete */
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: #252525;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        th {
+            background-color: #2d2d2d;
+            color: #6ea8fe;
+            font-size: 18px;
+        }
+        tr:last-child td { border-bottom: none; }
 
+        /* Custom Modal (Dark Theme) */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -154,28 +178,46 @@
     <h2>CYS1 Subject Lottery</h2>
 
     <div class="status-bar" id="statusText">
-        Ready for Group A
+        Ready for Group
     </div>
 
-    <div class="canvas-container">
+    <div class="canvas-container" id="wheelSection">
         <div class="pointer"></div>
         <canvas id="wheelCanvas" width="400" height="400"></canvas>
     </div>
 
-    <div class="controls">
+    <div class="controls" id="controlSection">
         <button id="spinBtn">Spin Wheel</button>
         <button id="resetBtn">Reset Pool</button>
     </div>
 
-    <div class="pool-container">
+    <div class="pool-container" id="poolSection">
         <h3>Remnant Tickets in Pool (<span id="poolCount">12</span>)</h3>
         <div id="ticketPool"></div>
+    </div>
+
+    <!-- Final Report Section -->
+    <div id="reportContainer">
+        <h3 style="color: #20c997; font-size: 24px; margin-bottom: 5px;">Lottery Complete!</h3>
+        <p style="color: #adb5bd; margin-top: 0;">Final Group Assignments</p>
+        <table id="reportTable">
+            <thead>
+            <tr>
+                <th>Group</th>
+                <th>Subject Assigned</th>
+            </tr>
+            </thead>
+            <tbody id="reportBody">
+            <!-- Report rows will be injected here -->
+            </tbody>
+        </table>
+        <button id="restartBtn" style="margin-top: 25px; background-color: #495057;">Start New Lottery</button>
     </div>
 </div>
 
 <div class="modal-overlay" id="winnerModal">
     <div class="modal-content">
-        <div class="modal-group" id="modalGroupText">Group A Spun:</div>
+        <div class="modal-group" id="modalGroupText">Group Spun:</div>
         <div class="modal-winner" id="modalWinnerText">Subject Name</div>
         <div class="modal-remnant" id="modalRemnantText">Tickets left after this: 11</div>
         <button id="acceptBtn">Accept & Remove Ticket</button>
@@ -184,8 +226,22 @@
 
 <script>
     // The 12 Groups
-    const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+    const baseGroups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+
+    // Fisher-Yates Shuffle Function to randomize arrays
+    function shuffleArray(array) {
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex > 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
+    let randomizedGroups = shuffleArray([...baseGroups]);
     let currentGroupIndex = 0;
+    let finalResults = []; // Store results for the report
 
     // The 12 balanced tickets
     const initialTickets = [
@@ -205,6 +261,7 @@
 
     let tickets = [...initialTickets];
     let winningIndex = -1;
+    let currentWinnerFullName = ""; // Used to pass full name to results array
 
     const canvas = document.getElementById("wheelCanvas");
     const ctx = canvas.getContext("2d");
@@ -217,12 +274,22 @@
     let animationId;
     let isSpinning = false;
 
+    // UI Sections
+    const wheelSection = document.getElementById("wheelSection");
+    const controlSection = document.getElementById("controlSection");
+    const poolSection = document.getElementById("poolSection");
+    const reportContainer = document.getElementById("reportContainer");
+    const reportBody = document.getElementById("reportBody");
+
+    // Controls
     const spinBtn = document.getElementById("spinBtn");
     const resetBtn = document.getElementById("resetBtn");
+    const restartBtn = document.getElementById("restartBtn");
     const statusText = document.getElementById("statusText");
     const poolCount = document.getElementById("poolCount");
     const ticketPool = document.getElementById("ticketPool");
 
+    // Modal
     const modal = document.getElementById("winnerModal");
     const modalGroupText = document.getElementById("modalGroupText");
     const modalWinnerText = document.getElementById("modalWinnerText");
@@ -230,16 +297,42 @@
     const acceptBtn = document.getElementById("acceptBtn");
 
     function updateUI() {
-        if (tickets.length === 0 || currentGroupIndex >= groups.length) {
+        if (tickets.length === 0 || currentGroupIndex >= randomizedGroups.length) {
+            // Lottery Complete - Show Report
             statusText.innerText = "Lottery Complete!";
             statusText.style.color = "#20c997";
-            spinBtn.disabled = true;
+
+            wheelSection.style.display = "none";
+            controlSection.style.display = "none";
+            poolSection.style.display = "none";
+            reportContainer.style.display = "block";
+
+            // Sort results alphabetically (A to L) before displaying
+            const sortedResults = [...finalResults].sort((a, b) => a.group.localeCompare(b.group));
+
+            reportBody.innerHTML = "";
+            sortedResults.forEach(res => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                        <td style="font-weight: bold; font-size: 18px;">Group ${res.group}</td>
+                        <td style="color: ${res.color}; font-weight: bold; font-size: 16px;">${res.subject}</td>
+                    `;
+                reportBody.appendChild(row);
+            });
+
         } else {
-            statusText.innerText = `Now Spinning: Group ${groups[currentGroupIndex]}`;
+            // Lottery in Progress
+            wheelSection.style.display = "inline-block";
+            controlSection.style.display = "flex";
+            poolSection.style.display = "block";
+            reportContainer.style.display = "none";
+
+            statusText.innerText = `Now Spinning: Group ${randomizedGroups[currentGroupIndex]}`;
             statusText.style.color = "#6ea8fe";
             spinBtn.disabled = false;
         }
 
+        // Update bottom ticket pool
         poolCount.innerText = tickets.length;
         ticketPool.innerHTML = "";
         tickets.forEach(ticket => {
@@ -253,14 +346,7 @@
 
     function drawWheel() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        if (tickets.length === 0) {
-            ctx.font = "bold 24px 'Segoe UI'";
-            ctx.fillStyle = "#ffffff";
-            ctx.textAlign = "center";
-            ctx.fillText("All subjects assigned!", centerX, centerY);
-            return;
-        }
+        if (tickets.length === 0) return; // Don't draw if empty
 
         const arcSize = (2 * Math.PI) / tickets.length;
 
@@ -272,7 +358,6 @@
             ctx.moveTo(centerX, centerY);
             ctx.arc(centerX, centerY, radius, angle, angle + arcSize);
             ctx.fill();
-
 
             ctx.strokeStyle = "#1e1e1e";
             ctx.lineWidth = 2;
@@ -289,7 +374,6 @@
             ctx.fillStyle = "#ffffff";
 
             ctx.font = "bold 12px 'Segoe UI'";
-
             ctx.shadowColor = "rgba(0,0,0,0.8)";
             ctx.shadowBlur = 5;
             ctx.fillText(tickets[i].text, 0, 0);
@@ -302,7 +386,7 @@
         isSpinning = true;
         spinBtn.disabled = true;
         resetBtn.disabled = true;
-        statusText.innerText = `Spinning for Group ${groups[currentGroupIndex]}...`;
+        statusText.innerText = `Spinning for Group ${randomizedGroups[currentGroupIndex]}...`;
 
         spinVelocity = Math.random() * 0.2 + 0.3;
         animateSpin();
@@ -332,12 +416,14 @@
         winningIndex = Math.floor(pointerAngle / arcSize);
         const winner = tickets[winningIndex];
 
-        modalGroupText.innerText = `Group ${groups[currentGroupIndex]} Gets:`;
+        modalGroupText.innerText = `Group ${randomizedGroups[currentGroupIndex]} Gets:`;
 
         let fullName = winner.text;
         if(fullName === "Intro to C") fullName = "Introduction to C";
         if(fullName === "Indian Knowledge Sys") fullName = "Indian Knowledge System";
         if(fullName === "Environmental Sci") fullName = "Environmental Science";
+
+        currentWinnerFullName = fullName; // Save for the results array
 
         modalWinnerText.innerText = fullName;
         modalWinnerText.style.color = winner.color;
@@ -347,6 +433,13 @@
     }
 
     acceptBtn.addEventListener("click", () => {
+        // Save the result before removing the ticket
+        finalResults.push({
+            group: randomizedGroups[currentGroupIndex],
+            subject: currentWinnerFullName,
+            color: tickets[winningIndex].color
+        });
+
         tickets.splice(winningIndex, 1);
         currentGroupIndex++;
         modal.classList.remove("show");
@@ -355,16 +448,22 @@
         drawWheel();
     });
 
-    resetBtn.addEventListener("click", () => {
+    function resetLottery() {
         if(confirm("Are you sure you want to reset the entire lottery?")) {
             tickets = [...initialTickets];
+            randomizedGroups = shuffleArray([...baseGroups]); // Reshuffle for next time
+            finalResults = [];
             currentGroupIndex = 0;
             currentAngle = 0;
             updateUI();
             drawWheel();
         }
-    });
+    }
 
+    resetBtn.addEventListener("click", resetLottery);
+    restartBtn.addEventListener("click", resetLottery); // Button inside the report
+
+    // Initialize App
     spinBtn.addEventListener("click", spin);
     updateUI();
     drawWheel();
